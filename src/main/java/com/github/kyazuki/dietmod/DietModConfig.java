@@ -38,7 +38,7 @@ public class DietModConfig {
       distanceToDeath = builder
               .comment("A default distance to die.")
               .translation(DietMod.MODID + ".config." + "distanceToDeath")
-              .defineInRange("distanceToDeath", 500, 100, 1000);
+              .defineInRange("distanceToDeath", 1000, 100, 100000);
       builder.pop();
     }
 

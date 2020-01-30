@@ -4,7 +4,6 @@ import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Food;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
@@ -35,6 +34,7 @@ public class DietMod {
   public static final float food_modifier = 10.0f;
   public static DamageSource Malnutrition = (new DamageSource("dietmod:malnutrition")).setDamageBypassesArmor();
   public static float scale = 2.0f;
+  public static float hitboxScale = 0.6f * maxScale;
   public static float prevWalkDistance = 0.0f;
   public static float walkDistance = 0.0f;
   public static float prevMaxHealth = maxScale * 20.0f;
@@ -70,15 +70,16 @@ public class DietMod {
   @SubscribeEvent
   public static void sethitboxPlayer(TickEvent.PlayerTickEvent event) {
     if (!event.player.world.isRemote()) {
-      walkDistance = prevWalkDistance + (float) (event.player.distanceWalkedModified / 0.6) - food_heal;
+      walkDistance = prevWalkDistance + event.player.distanceWalkedModified / 0.6f - food_heal;
       scale = MathHelper.clamp(maxScale - walkDistance / distanceToDeath, 0.2f, maxScale);
     }
     if (event.player.isAlive()) {
-      float scaleX = 1.2f, scaleZ = 2.0f;
-      scaleX = MathHelper.clamp(scaleX - walkDistance / (distanceToDeath * 5), 0.2f, 1.2f);
-      scaleZ = MathHelper.clamp(scaleZ - walkDistance / distanceToDeath, 0.2f, 2.0f);
+      if(scale > 1.2f)
+        hitboxScale = 1.2f;
+      else
+        hitboxScale = MathHelper.clamp(0.6f * scale, 0.2f, 0.6f * maxScale);
       AxisAlignedBB playerBoundingBox = event.player.getBoundingBox();
-      event.player.setBoundingBox(new AxisAlignedBB(playerBoundingBox.minX, playerBoundingBox.minY, playerBoundingBox.minZ, playerBoundingBox.minX + 0.8f * scaleX, playerBoundingBox.maxY, playerBoundingBox.minZ + 0.8f * scaleZ));
+      event.player.setBoundingBox(new AxisAlignedBB(playerBoundingBox.minX, playerBoundingBox.minY, playerBoundingBox.minZ, playerBoundingBox.minX + hitboxScale, playerBoundingBox.maxY, playerBoundingBox.minZ + hitboxScale));
     }
   }
 
@@ -138,7 +139,7 @@ public class DietMod {
   public static void onEat(LivingEntityUseItemEvent.Finish event) {
     if (event.getEntity().world.isRemote()) {
       if (event.getEntity() instanceof PlayerEntity) {
-        if (event.getItem().getItem().getFood() instanceof Food) {
+        if (event.getItem().getItem().isFood()) {
           food_heal += event.getItem().getItem().getFood().getHealing() * food_modifier;
         }
       }
