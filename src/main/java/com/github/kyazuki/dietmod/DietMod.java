@@ -1,12 +1,19 @@
 package com.github.kyazuki.dietmod;
 
+import net.minecraft.client.GameSettings;
+import net.minecraft.client.Minecraft;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.potion.EffectInstance;
+import net.minecraft.potion.Effects;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.event.FOVUpdateEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
@@ -58,7 +65,6 @@ public class DietMod {
     player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).applyModifier(new AttributeModifier(FatHealth, "FatMaxHealth", maxScale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
     player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).applyModifier(new AttributeModifier(FatMovenentSpeed, "FatMovementSpeed", 1.0f / maxScale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
     player.setHealth(maxScale * 20.0f);
-    LOGGER.debug("change to: " + player.getHealth() + " / " + player.getMaxHealth());
   }
 
   public static void resetPlayer(PlayerEntity player) {
@@ -74,7 +80,7 @@ public class DietMod {
       scale = MathHelper.clamp(maxScale - walkDistance / distanceToDeath, 0.2f, maxScale);
     }
     if (event.player.isAlive()) {
-      if(scale > 1.2f)
+      if (scale > 1.2f)
         hitboxScale = 1.2f;
       else
         hitboxScale = MathHelper.clamp(0.6f * scale, 0.2f, 0.6f * maxScale);
@@ -105,6 +111,21 @@ public class DietMod {
       player_movement_speed = event.player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED);
       player_movement_speed.removeModifier(FatMovenentSpeed);
       player_movement_speed.applyModifier(new AttributeModifier(FatMovenentSpeed, "FatMovementSpeed", speed - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
+    }
+  }
+
+  @SubscribeEvent
+  @OnlyIn(Dist.CLIENT)
+  public void onFOVChange(FOVUpdateEvent event) {
+    if (event.getEntity() instanceof PlayerEntity) {
+      PlayerEntity player = event.getEntity();
+      GameSettings settings = Minecraft.getInstance().gameSettings;
+      EffectInstance speed = player.getActivePotionEffect(Effects.SPEED);
+      float fov = (float) settings.fov;
+      if (player.isSprinting())
+        event.setNewfov(speed != null ? fov + ((0.1f * (speed.getAmplifier() + 1)) + 0.15f) : fov + 0.15f);
+      else
+        event.setNewfov(speed != null ? fov + (0.1f * (speed.getAmplifier() + 1)) : fov);
     }
   }
 
