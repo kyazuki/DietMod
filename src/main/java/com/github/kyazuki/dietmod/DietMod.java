@@ -1,7 +1,5 @@
 package com.github.kyazuki.dietmod;
 
-import net.minecraft.client.GameSettings;
-import net.minecraft.client.Minecraft;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
@@ -11,8 +9,6 @@ import net.minecraft.potion.Effects;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.FOVUpdateEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.event.TickEvent;
@@ -62,8 +58,8 @@ public class DietMod {
 
   public static void setFatPlayer(PlayerEntity player) {
     player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeModifier(FatHealth);
-    player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeModifier(FatMovenentSpeed);
     player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).applyModifier(new AttributeModifier(FatHealth, "FatMaxHealth", maxScale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
+    player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeModifier(FatMovenentSpeed);
     player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).applyModifier(new AttributeModifier(FatMovenentSpeed, "FatMovementSpeed", 1.0f / maxScale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
     player.setHealth(maxScale * 20.0f);
   }
@@ -116,17 +112,15 @@ public class DietMod {
   }
 
   @SubscribeEvent
-  @OnlyIn(Dist.CLIENT)
-  public void onFOVChange(FOVUpdateEvent event) {
+  public static void onFOVChange(FOVUpdateEvent event) {
     if (event.getEntity() instanceof PlayerEntity) {
       PlayerEntity player = event.getEntity();
-      GameSettings settings = Minecraft.getInstance().gameSettings;
       EffectInstance speed = player.getActivePotionEffect(Effects.SPEED);
-      float fov = (float) settings.fov;
+      float fov = 0.9f, sprint_fov = 1.02f;
       if (player.isSprinting())
-        event.setNewfov(speed != null ? fov + ((0.1f * (speed.getAmplifier() + 1)) + 0.15f) : fov + 0.15f);
+        event.setNewfov(speed != null ? sprint_fov + ((0.104f * (speed.getAmplifier() + 1))) : sprint_fov);
       else
-        event.setNewfov(speed != null ? fov + (0.1f * (speed.getAmplifier() + 1)) : fov);
+        event.setNewfov(speed != null ? fov + (0.08f * (speed.getAmplifier() + 1)) : fov);
     }
   }
 
