@@ -56,6 +56,7 @@ public class DietMod {
 
   @SubscribeEvent
   public static void onServerStart(FMLServerStartingEvent event) {
+    SetDistanceCommand.register(event.getCommandDispatcher());
     distanceToDeath = DietModConfig.distanceToDeath;
   }
 

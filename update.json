@@ -1,12 +1,13 @@
 {
   "homepage": "https://github.com/kyazuki/DietMod/releases",
   "1.15.2": {
+    "0.1.3": "Add a command for changing the distance to die.(not working yet)",
     "0.1.2": "Disable FOVChange by AttributeModifier.(not working yet)",
     "0.1.1": "Adjust player's hitbox.",
     "0.1.0": "Published."
   },
   "promos": {
-    "1.15.2-latest": "0.1.2",
+    "1.15.2-latest": "0.1.3",
     "1.15.2-recommended": "0.1.1"
   }
 }
