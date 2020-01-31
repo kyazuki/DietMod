@@ -1,6 +1,11 @@
 # DietMod
 Let's diet yourself!
 
+## 対応バージョン
+Minecraft: 1.15.2<br>
+Minecraft Forge: 31.0.0以上<br>
+http://files.minecraftforge.net/maven/net/minecraftforge/forge/index_1.15.2.html
+
 ## 概説
 プレイヤーが太ります。<br>
 歩いた距離に応じて徐々に痩せていきますが、食べ物を食べるとその回復量に応じて太ります。<br>
@@ -12,10 +17,29 @@ Let's diet yourself!
 
 ## configファイル
 Modを導入した状態で一回でも起動すると、configフォルダ内にdietmod-client.tomlが生成されます。<br>
-ファイル内のdistanceToDeathの値を変更すると、死ぬまでに必要な移動距離(単位:ブロック)を変更できます。<br>
-(※途中で食べ物を食べるとその分太るので、設定した距離とはズレます。)<br>
-100～100000の間で指定でき、デフォルトは1000です。動画の尺に合わせて調整してください。<br>
-なお、変更は次回の起動時に適用されます。
+値の変更は次回の起動時に適用されます。
+- distanceToNormal
+  - 通常体型に戻るまでに必要な移動距離(単位:ブロック)です。<br>
+    (※途中で食べ物を食べるとその分太るので、設定した距離とはズレます。)<br>
+    100～100000の間で指定でき、デフォルトは1000です。動画の尺に合わせて調整してください。
+- killHealth
+  - 最大体力値がこの値を下回ると強制的に死にます。<br>
+    0.1〜2.0の間で指定でき、デフォルトは0.45です。0.1でハート1個分にあたります。
+- count_food
+  - 食べ物を食べると太るかどうか。<br>
+    trueかfalseで指定でき、デフォルトはtrueです。
+- change_hitbox
+  - プレイヤーの当たり判定を変更するかどうか。<br>
+    trueかfalseで指定でき、デフォルトはtrueです。
+- change_max_health
+  - プレイヤーの最大体力値を変更するかどうか。<br>
+    trueかfalseで指定でき、デフォルトはtrueです。
+- change_speed
+  - プレイヤーの移動速度を変更するかどうか。<br>
+    trueかfalseで指定でき、デフォルトはtrueです。
+- change_jump_boost
+  - プレイヤーの跳躍力を変更するかどうか。<br>
+    trueかfalseで指定でき、デフォルトはtrueです。
 
 ## 注意点
 - シングルプレイのみ対応です。
