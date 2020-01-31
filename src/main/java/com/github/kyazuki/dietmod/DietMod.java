@@ -32,7 +32,6 @@ public class DietMod {
   public static final Logger LOGGER = LogManager.getLogger(MODID);
   public static final UUID FatHealth = UUID.fromString("7f73c613-1c4f-45df-8176-6e3f9590347b");
   public static final UUID FatMovenentSpeed = UUID.fromString("bba5aa63-ec4b-481f-9e2f-18d0c0a8e615");
-  public static int distanceToDeath;
   public static final float maxScale = 2.0f;
   public static final float food_modifier = 10.0f;
   public static DamageSource Malnutrition = (new DamageSource("dietmod:malnutrition")).setDamageBypassesArmor();
@@ -53,15 +52,17 @@ public class DietMod {
   @SubscribeEvent
   public static void onServerStart(FMLServerStartingEvent event) {
     SetDistanceCommand.register(event.getCommandDispatcher());
-    distanceToDeath = DietModConfig.distanceToDeath;
   }
 
   public static void setFatPlayer(PlayerEntity player) {
     player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeModifier(FatHealth);
-    player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).applyModifier(new AttributeModifier(FatHealth, "FatMaxHealth", maxScale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
+    if (DietModConfig.change_max_health) {
+      player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).applyModifier(new AttributeModifier(FatHealth, "FatMaxHealth", maxScale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
+      player.setHealth(maxScale * 20.0f);
+    }
     player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeModifier(FatMovenentSpeed);
-    player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).applyModifier(new AttributeModifier(FatMovenentSpeed, "FatMovementSpeed", 1.0f / maxScale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
-    player.setHealth(maxScale * 20.0f);
+    if (DietModConfig.change_speed)
+      player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).applyModifier(new AttributeModifier(FatMovenentSpeed, "FatMovementSpeed", 1.0f / maxScale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
   }
 
   public static void resetPlayer(PlayerEntity player) {
@@ -71,12 +72,19 @@ public class DietMod {
   }
 
   @SubscribeEvent
-  public static void sethitboxPlayer(TickEvent.PlayerTickEvent event) {
+  public static void calc(TickEvent.PlayerTickEvent event) {
     if (!event.player.world.isRemote()) {
-      walkDistance = prevWalkDistance + event.player.distanceWalkedModified / 0.6f - food_heal;
-      scale = MathHelper.clamp(maxScale - walkDistance / distanceToDeath, 0.2f, maxScale);
+      if (DietModConfig.count_food)
+        walkDistance = prevWalkDistance + event.player.distanceWalkedModified / 0.6f - food_heal;
+      else
+        walkDistance = prevWalkDistance + event.player.distanceWalkedModified / 0.6f;
+      scale = MathHelper.clamp(maxScale - walkDistance / DietModConfig.distanceToNormal, 0.2f, maxScale);
     }
-    if (event.player.isAlive()) {
+  }
+
+  @SubscribeEvent
+  public static void sethitboxPlayer(TickEvent.PlayerTickEvent event) {
+    if (DietModConfig.change_hitbox && event.player.isAlive()) {
       if (scale > 1.2f)
         hitboxScale = 1.2f;
       else
@@ -88,12 +96,12 @@ public class DietMod {
 
   @SubscribeEvent
   public static void setHealthPlayer(TickEvent.PlayerTickEvent event) {
-    if (event.player.isAlive() && !event.player.world.isRemote()) {
-      scale = Math.round(scale * 10) / 10.0f;
-      if (prevMaxHealth != scale * 20.0f) {
+    if (DietModConfig.change_max_health && event.player.isAlive() && !event.player.world.isRemote()) {
+      float scaleHealth = Math.round(scale * 10) / 10.0f;
+      if (prevMaxHealth != scaleHealth * 20.0f) {
         player_max_health = event.player.getAttribute(SharedMonsterAttributes.MAX_HEALTH);
         player_max_health.removeModifier(FatHealth);
-        player_max_health.applyModifier(new AttributeModifier(FatHealth, "FatMaxHealth", scale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
+        player_max_health.applyModifier(new AttributeModifier(FatHealth, "FatMaxHealth", scaleHealth - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
         prevMaxHealth = event.player.getMaxHealth();
         if (event.player.getHealth() > event.player.getMaxHealth())
           event.player.setHealth(event.player.getMaxHealth());
@@ -103,7 +111,7 @@ public class DietMod {
 
   @SubscribeEvent
   public static void setSpeedPlayer(TickEvent.PlayerTickEvent event) {
-    if (event.player.isAlive() && !event.player.world.isRemote()) {
+    if (DietModConfig.change_speed && event.player.isAlive() && !event.player.world.isRemote()) {
       double speed = MathHelper.clamp(1.0f / scale, 0.8f, 1.5f);
       player_movement_speed = event.player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED);
       player_movement_speed.removeModifier(FatMovenentSpeed);
@@ -126,7 +134,7 @@ public class DietMod {
 
   @SubscribeEvent
   public static void onJumpPlayer(LivingEvent.LivingJumpEvent event) {
-    if (event.getEntity() instanceof PlayerEntity) {
+    if (DietModConfig.change_jump_boost && event.getEntity() instanceof PlayerEntity) {
       if (scale < 1.0f) {
         PlayerEntity player = (PlayerEntity) event.getEntity();
         double motionY = MathHelper.clamp(player.getMotion().y / scale, player.getMotion().y, player.getMotion().y * 1.5f);
@@ -138,9 +146,9 @@ public class DietMod {
   @SubscribeEvent
   public static void onkillPlayer(TickEvent.PlayerTickEvent event) {
     if (!event.player.world.isRemote()) {
-      if (maxScale - walkDistance / distanceToDeath < 0.45f) {
+      if (maxScale - walkDistance / DietModConfig.distanceToNormal < DietModConfig.killHealth) {
         if (event.player.isAlive()) {
-          event.player.attackEntityFrom(Malnutrition, 10.0f);
+          event.player.attackEntityFrom(Malnutrition, 20.0f);
         }
       }
     }
@@ -153,7 +161,7 @@ public class DietMod {
 
   @SubscribeEvent
   public static void onEat(LivingEntityUseItemEvent.Finish event) {
-    if (event.getEntity().world.isRemote()) {
+    if (DietModConfig.count_food && event.getEntity().world.isRemote()) {
       if (event.getEntity() instanceof PlayerEntity) {
         if (event.getItem().getItem().isFood()) {
           food_heal += event.getItem().getItem().getFood().getHealing() * food_modifier;

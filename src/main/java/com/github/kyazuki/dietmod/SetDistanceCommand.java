@@ -13,7 +13,7 @@ public class SetDistanceCommand {
             .then(Commands.argument("blocks", IntegerArgumentType.integer()))
             .executes(context -> {
               context.getSource().sendFeedback(new TranslationTextComponent("commands.dietmod.setdistance"), true);
-              DietMod.distanceToDeath = IntegerArgumentType.getInteger(context, "blocks");
+              DietModConfig.distanceToNormal = IntegerArgumentType.getInteger(context, "blocks");
               return 0;
             }));
   }
