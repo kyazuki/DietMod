@@ -2,9 +2,9 @@
 Let's diet yourself!
 
 ## 対応バージョン
-Minecraft: 1.15.2<br>
-Minecraft Forge: 31.0.0以上<br>
-http://files.minecraftforge.net/maven/net/minecraftforge/forge/index_1.15.2.html
+Minecraft: 1.16.1<br>
+Minecraft Forge: 32.0.75以上<br>
+http://files.minecraftforge.net/maven/net/minecraftforge/forge/index_1.16.1.html
 
 ## 概説
 プレイヤーが太ります。<br>
@@ -14,6 +14,11 @@ http://files.minecraftforge.net/maven/net/minecraftforge/forge/index_1.15.2.html
 太っているほど最大体力値が増加し、当たり判定が拡大し、採掘速度が上昇し、移動速度が減少します。<br>
 痩せているほど最大体力値が減少し、当たり判定が縮小し、採掘速度が減少し、移動速度が上昇し、跳躍力が上昇します。<br>
 痩せすぎると死にます。
+
+## コマンド
+- /setdistance <ブロック数>
+  - 通常体型に戻るまでに必要な移動距離(単位:ブロック)です。<br>
+    configファイルにおけるdistanceToNormalを一時的に変更するコマンドです。
 
 ## configファイル
 Modを導入した状態で一回でも起動すると、configフォルダ内にdietmod-client.tomlが生成されます。<br>

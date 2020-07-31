@@ -1,8 +1,8 @@
 package com.github.kyazuki.dietmod;
 
-import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
-import net.minecraft.entity.ai.attributes.IAttributeInstance;
+import net.minecraft.entity.ai.attributes.Attributes;
+import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.potion.Effects;
@@ -11,6 +11,7 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.client.event.FOVUpdateEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
@@ -19,7 +20,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.event.server.FMLServerStartingEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -41,8 +41,8 @@ public class DietMod {
   public static float walkDistance = 0.0f;
   public static float prevMaxHealth = maxScale * 20.0f;
   public static float food_heal = 0.0f;
-  public static IAttributeInstance player_max_health = null;
-  public static IAttributeInstance player_movement_speed = null;
+  public static ModifiableAttributeInstance player_max_health = null;
+  public static ModifiableAttributeInstance player_movement_speed = null;
 
   public DietMod() {
     LOGGER.debug("DietMod Loaded.");
@@ -50,19 +50,19 @@ public class DietMod {
   }
 
   @SubscribeEvent
-  public static void onServerStart(FMLServerStartingEvent event) {
-    SetDistanceCommand.register(event.getCommandDispatcher());
+  public static void onCommandsRegister(RegisterCommandsEvent event) {
+    SetDistanceCommand.register(event.getDispatcher());
   }
 
   public static void setFatPlayer(PlayerEntity player) {
-    player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeModifier(FatHealth);
+    player.getAttribute(Attributes.MAX_HEALTH).removeModifier(FatHealth);
     if (DietModConfig.change_max_health) {
-      player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).applyModifier(new AttributeModifier(FatHealth, "FatMaxHealth", maxScale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
+      player.getAttribute(Attributes.MAX_HEALTH).applyNonPersistentModifier(new AttributeModifier(FatHealth, "FatMaxHealth", maxScale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
       player.setHealth(maxScale * 20.0f);
     }
-    player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeModifier(FatMovenentSpeed);
+    player.getAttribute(Attributes.MOVEMENT_SPEED).removeModifier(FatMovenentSpeed);
     if (DietModConfig.change_speed)
-      player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).applyModifier(new AttributeModifier(FatMovenentSpeed, "FatMovementSpeed", 1.0f / maxScale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
+      player.getAttribute(Attributes.MOVEMENT_SPEED).applyNonPersistentModifier(new AttributeModifier(FatMovenentSpeed, "FatMovementSpeed", 1.0f / maxScale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
   }
 
   public static void resetPlayer(PlayerEntity player) {
@@ -99,9 +99,9 @@ public class DietMod {
     if (DietModConfig.change_max_health && event.player.isAlive() && !event.player.world.isRemote()) {
       float scaleHealth = Math.round(scale * 10) / 10.0f;
       if (prevMaxHealth != scaleHealth * 20.0f) {
-        player_max_health = event.player.getAttribute(SharedMonsterAttributes.MAX_HEALTH);
+        player_max_health = event.player.getAttribute(Attributes.MAX_HEALTH);
         player_max_health.removeModifier(FatHealth);
-        player_max_health.applyModifier(new AttributeModifier(FatHealth, "FatMaxHealth", scaleHealth - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
+        player_max_health.applyNonPersistentModifier(new AttributeModifier(FatHealth, "FatMaxHealth", scaleHealth - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
         prevMaxHealth = event.player.getMaxHealth();
         if (event.player.getHealth() > event.player.getMaxHealth())
           event.player.setHealth(event.player.getMaxHealth());
@@ -113,9 +113,9 @@ public class DietMod {
   public static void setSpeedPlayer(TickEvent.PlayerTickEvent event) {
     if (DietModConfig.change_speed && event.player.isAlive() && !event.player.world.isRemote()) {
       double speed = MathHelper.clamp(1.0f / scale, 0.8f, 1.5f);
-      player_movement_speed = event.player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED);
+      player_movement_speed = event.player.getAttribute(Attributes.MOVEMENT_SPEED);
       player_movement_speed.removeModifier(FatMovenentSpeed);
-      player_movement_speed.applyModifier(new AttributeModifier(FatMovenentSpeed, "FatMovementSpeed", speed - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
+      player_movement_speed.applyNonPersistentModifier(new AttributeModifier(FatMovenentSpeed, "FatMovementSpeed", speed - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
     }
   }
 
