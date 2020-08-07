@@ -8,12 +8,13 @@ import org.apache.commons.lang3.tuple.Pair;
 
 @Mod.EventBusSubscriber(modid = DietMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class DietModConfig {
-  public static final ClientConfig CLIENT;
-  public static final ForgeConfigSpec CLIENT_SPEC;
+  public static final CommonConfig COMMON;
+  public static final ForgeConfigSpec COMMON_SPEC;
+
   static {
-    final Pair<ClientConfig, ForgeConfigSpec> specPair = new ForgeConfigSpec.Builder().configure(ClientConfig::new);
-    CLIENT_SPEC = specPair.getRight();
-    CLIENT = specPair.getLeft();
+    final Pair<CommonConfig, ForgeConfigSpec> specPair = new ForgeConfigSpec.Builder().configure(CommonConfig::new);
+    COMMON_SPEC = specPair.getRight();
+    COMMON = specPair.getLeft();
   }
 
   public static int distanceToNormal;
@@ -26,22 +27,22 @@ public class DietModConfig {
 
   @SubscribeEvent
   public static void onModConfigEvent(final ModConfig.ModConfigEvent configEvent) {
-    if (configEvent.getConfig().getSpec() == DietModConfig.CLIENT_SPEC) {
+    if (configEvent.getConfig().getSpec() == DietModConfig.COMMON_SPEC) {
       bakeConfig();
     }
   }
 
   public static void bakeConfig() {
-    distanceToNormal = CLIENT.distanceToNormal.get();
-    killHealth = CLIENT.killHealth.get();
-    count_food = CLIENT.count_food.get();
-    change_hitbox = CLIENT.change_hitbox.get();
-    change_max_health = CLIENT.change_max_health.get();
-    change_speed = CLIENT.change_speed.get();
-    change_jump_boost = CLIENT.change_jump_boost.get();
+    distanceToNormal = COMMON.distanceToNormal.get();
+    killHealth = COMMON.killHealth.get();
+    count_food = COMMON.count_food.get();
+    change_hitbox = COMMON.change_hitbox.get();
+    change_max_health = COMMON.change_max_health.get();
+    change_speed = COMMON.change_speed.get();
+    change_jump_boost = COMMON.change_jump_boost.get();
   }
 
-  public static class ClientConfig {
+  public static class CommonConfig {
 
     public final ForgeConfigSpec.IntValue distanceToNormal;
     public final ForgeConfigSpec.DoubleValue killHealth;
@@ -51,7 +52,7 @@ public class DietModConfig {
     public final ForgeConfigSpec.BooleanValue change_speed;
     public final ForgeConfigSpec.BooleanValue change_jump_boost;
 
-    public ClientConfig(ForgeConfigSpec.Builder builder) {
+    public CommonConfig(ForgeConfigSpec.Builder builder) {
       builder.push("DietMod Config");
       distanceToNormal = builder
               .comment("A default distance to normal.")
