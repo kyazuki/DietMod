@@ -33,12 +33,9 @@ public class EventSubscriber {
   public static final ResourceLocation SCALE_CAP_RESOURCE = new ResourceLocation(DietMod.MODID, "capabilities");
   public static final UUID FatHealth = UUID.fromString("7f73c613-1c4f-45df-8176-6e3f9590347b");
   public static final UUID FatMovenentSpeed = UUID.fromString("bba5aa63-ec4b-481f-9e2f-18d0c0a8e615");
+  public static DamageSource Malnutrition = (new DamageSource("dietmod:malnutrition")).setDamageBypassesArmor();
   public static final float maxScale = 2.0f;
   public static final float food_modifier = 10.0f;
-  public static DamageSource Malnutrition = (new DamageSource("dietmod:malnutrition")).setDamageBypassesArmor();
-  public static float prevMaxHealth = 0.0f;
-  public static ModifiableAttributeInstance player_max_health = null;
-  public static ModifiableAttributeInstance player_movement_speed = null;
 
   // Utils
 
@@ -81,11 +78,10 @@ public class EventSubscriber {
     if (DietModConfig.change_max_health && !event.player.getEntityWorld().isRemote() && event.player.isAlive()) {
       float scale = getCap(event.player).getScale();
       float scaleHealth = Math.round(scale * 10) / 10.0f;
-      if (prevMaxHealth != scaleHealth * 20.0f) {
-        player_max_health = event.player.getAttribute(Attributes.MAX_HEALTH);
+      if (event.player.getMaxHealth() != scaleHealth * 20.0f) {
+        ModifiableAttributeInstance player_max_health = event.player.getAttribute(Attributes.MAX_HEALTH);
         player_max_health.removeModifier(FatHealth);
         player_max_health.applyNonPersistentModifier(new AttributeModifier(FatHealth, "FatMaxHealth", scaleHealth - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
-        prevMaxHealth = event.player.getMaxHealth();
         if (event.player.getHealth() > event.player.getMaxHealth())
           event.player.setHealth(event.player.getMaxHealth());
       }
@@ -97,7 +93,7 @@ public class EventSubscriber {
     if (DietModConfig.change_speed && !event.player.getEntityWorld().isRemote() && event.player.isAlive()) {
       float scale = getCap(event.player).getScale();
       double speed = MathHelper.clamp(1.0f / scale, 0.8f, 1.5f);
-      player_movement_speed = event.player.getAttribute(Attributes.MOVEMENT_SPEED);
+      ModifiableAttributeInstance player_movement_speed = event.player.getAttribute(Attributes.MOVEMENT_SPEED);
       player_movement_speed.removeModifier(FatMovenentSpeed);
       player_movement_speed.applyNonPersistentModifier(new AttributeModifier(FatMovenentSpeed, "FatMovementSpeed", speed - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
     }
