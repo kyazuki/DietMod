@@ -43,10 +43,3 @@ Let's diet yourself!
     ordering="NONE"
     # Side this dependency is applied on - BOTH, CLIENT or SERVER
     side="BOTH"
-# Here's another dependency
-[[dependencies.dietmod]]
-    modId="minecraft"
-    mandatory=true
-    versionRange="[1.16.1]"
-    ordering="NONE"
-    side="BOTH"

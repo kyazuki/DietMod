@@ -17,9 +17,11 @@ public class DietModConfig {
     COMMON = specPair.getLeft();
   }
 
+  public static double maxScale;
   public static int distanceToNormal;
   public static double killHealth;
   public static boolean count_food;
+  public static double food_modifier;
   public static boolean change_hitbox;
   public static boolean change_max_health;
   public static boolean change_speed;
@@ -33,9 +35,11 @@ public class DietModConfig {
   }
 
   public static void bakeConfig() {
+    maxScale = COMMON.maxScale.get();
     distanceToNormal = COMMON.distanceToNormal.get();
     killHealth = COMMON.killHealth.get();
     count_food = COMMON.count_food.get();
+    food_modifier = COMMON.food_modifier.get();
     change_hitbox = COMMON.change_hitbox.get();
     change_max_health = COMMON.change_max_health.get();
     change_speed = COMMON.change_speed.get();
@@ -44,9 +48,11 @@ public class DietModConfig {
 
   public static class CommonConfig {
 
+    public final ForgeConfigSpec.DoubleValue maxScale;
     public final ForgeConfigSpec.IntValue distanceToNormal;
     public final ForgeConfigSpec.DoubleValue killHealth;
     public final ForgeConfigSpec.BooleanValue count_food;
+    public final ForgeConfigSpec.DoubleValue food_modifier;
     public final ForgeConfigSpec.BooleanValue change_hitbox;
     public final ForgeConfigSpec.BooleanValue change_max_health;
     public final ForgeConfigSpec.BooleanValue change_speed;
@@ -54,6 +60,10 @@ public class DietModConfig {
 
     public CommonConfig(ForgeConfigSpec.Builder builder) {
       builder.push("DietMod Config");
+      maxScale = builder
+              .comment("Max size of player.")
+              .translation(DietMod.MODID + ".config." + "maxScale")
+              .defineInRange("maxScale", 2.0d, 1.0d, 10.0d);
       distanceToNormal = builder
               .comment("A default distance to normal.")
               .translation(DietMod.MODID + ".config." + "distanceToNormal")
@@ -66,6 +76,10 @@ public class DietModConfig {
               .comment("Players are fat when they eat foods.")
               .translation(DietMod.MODID + ".config" + "count_food")
               .define("count_food", true);
+      food_modifier = builder
+              .comment("Fat amount by hunger.")
+              .translation(DietMod.MODID + ".config." + "food_modifier")
+              .defineInRange("food_modifier", 0.025d, 0.0d, 10.0d);
       change_hitbox = builder
               .comment("Whether Player's hitbox is changed.")
               .translation(DietMod.MODID + ".config" + "change_hitbox")

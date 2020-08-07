@@ -26,6 +26,6 @@ public class DietMod {
   }
 
   public static void onFMLCommonSetup(FMLCommonSetupEvent event) {
-    CapabilityManager.INSTANCE.register(IScale.class, new ScaleStorage(), () -> new Scale(2.0f));
+    CapabilityManager.INSTANCE.register(IScale.class, new ScaleStorage(), () -> new Scale((float) DietModConfig.maxScale));
   }
 }

@@ -26,7 +26,6 @@ public class CapabilityPacket {
   public static void handle(CapabilityPacket pkt, Supplier<NetworkEvent.Context> contextSupplier) {
     NetworkEvent.Context context = contextSupplier.get();
     context.enqueueWork(() -> {
-      //PlayerEntity player = context.getSender();
       PlayerEntity player = Minecraft.getInstance().player;
       if (player == null) return;
       player.getCapability(ScaleProvider.SCALE_CAP).orElseThrow(IllegalArgumentException::new).setScale(pkt.scale);
