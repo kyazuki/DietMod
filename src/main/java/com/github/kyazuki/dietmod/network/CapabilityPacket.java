@@ -2,10 +2,11 @@ package com.github.kyazuki.dietmod.network;
 
 import com.github.kyazuki.dietmod.capabilities.ScaleProvider;
 import net.minecraft.client.Minecraft;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.PacketBuffer;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.network.NetworkEvent;
 
 import java.util.function.Supplier;
@@ -30,14 +31,20 @@ public class CapabilityPacket {
 
   public static void handle(CapabilityPacket pkt, Supplier<NetworkEvent.Context> contextSupplier) {
     NetworkEvent.Context context = contextSupplier.get();
-    context.enqueueWork(() -> handleClient(pkt));
+    context.enqueueWork(() -> DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> Handle.handleClient(pkt.playerEntityID, pkt.scale)));
     context.setPacketHandled(true);
   }
 
-  @OnlyIn(Dist.CLIENT)
-  public static void handleClient(CapabilityPacket pkt) {
-    PlayerEntity player = (PlayerEntity) Minecraft.getInstance().world.getEntityByID(pkt.playerEntityID);
-    if (player == null) return;
-    player.getCapability(ScaleProvider.SCALE_CAP).orElseThrow(IllegalArgumentException::new).setScale(pkt.scale);
+  public static class Handle {
+    public static DistExecutor.SafeRunnable handleClient(int playerEntityID, float scale) {
+      return new DistExecutor.SafeRunnable() {
+        @Override
+        public void run() {
+          Entity player = Minecraft.getInstance().world.getEntityByID(playerEntityID);
+          if (!(player instanceof PlayerEntity)) return;
+          player.getCapability(ScaleProvider.SCALE_CAP).orElseThrow(IllegalArgumentException::new).setScale(scale);
+        }
+      };
+    }
   }
 }
