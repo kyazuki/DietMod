@@ -12,8 +12,9 @@ public class SetDistanceCommand {
             .requires(source -> source.hasPermissionLevel(2))
             .then(Commands.argument("blocks", IntegerArgumentType.integer(10, 100000))
                     .executes(context -> {
-                      DietModConfig.distanceToNormal = IntegerArgumentType.getInteger(context, "blocks");
-                      context.getSource().sendFeedback(new TranslationTextComponent("commands.dietmod.setdistance", DietModConfig.distanceToNormal), true);
+                      int value = IntegerArgumentType.getInteger(context, "blocks");
+                      DietModConfig.distanceToNormal = value;
+                      context.getSource().sendFeedback(new TranslationTextComponent("commands.dietmod.setdistance", value), true);
                       return 0;
                     })));
   }

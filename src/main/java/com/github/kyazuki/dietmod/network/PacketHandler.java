@@ -24,4 +24,8 @@ public class PacketHandler {
   public static void sendTo(Object message, PlayerEntity player) {
     CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player), message);
   }
+
+  public static void sendToAll(Object message) {
+    CHANNEL.send(PacketDistributor.ALL.noArg(), message);
+  }
 }

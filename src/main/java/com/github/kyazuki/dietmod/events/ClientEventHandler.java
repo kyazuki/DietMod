@@ -1,4 +1,4 @@
-package com.github.kyazuki.dietmod.eventhandler;
+package com.github.kyazuki.dietmod.events;
 
 import com.github.kyazuki.dietmod.DietMod;
 import com.github.kyazuki.dietmod.capabilities.ScaleProvider;

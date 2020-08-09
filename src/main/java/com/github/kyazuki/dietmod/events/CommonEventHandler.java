@@ -1,4 +1,4 @@
-package com.github.kyazuki.dietmod.eventhandler;
+package com.github.kyazuki.dietmod.events;
 
 import com.github.kyazuki.dietmod.DietMod;
 import com.github.kyazuki.dietmod.DietModConfig;
@@ -16,6 +16,7 @@ import net.minecraft.util.DamageSource;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
@@ -63,44 +64,48 @@ public class CommonEventHandler {
         float prevScale = cap.getScale();
         float scale = MathHelper.clamp(prevScale - distance / DietModConfig.distanceToNormal, 0.2f, (float) DietModConfig.maxScale);
         cap.setScale(scale);
-        PacketHandler.sendTo(new CapabilityPacket(scale), event.player);
+        MinecraftForge.EVENT_BUS.post(new ChangeScaleEvent(event.player, scale));
+        PacketHandler.sendToAll(new CapabilityPacket(event.player.getEntityId(), scale));
         cap.setPrevWalkDistance(distanceWalked);
       }
     }
   }
 
   @SubscribeEvent
-  public static void setHealthPlayer(TickEvent.PlayerTickEvent event) {
-    if (DietModConfig.change_max_health && !event.player.getEntityWorld().isRemote() && event.player.isAlive()) {
-      float scale = getCap(event.player).getScale();
+  public static void setHealthPlayer(ChangeScaleEvent event) {
+    if (DietModConfig.change_max_health && !event.getPlayer().getEntityWorld().isRemote()) {
+      PlayerEntity player = event.getPlayer();
+      float scale = event.getScale();
       float scaleHealth = Math.round(scale * 10) / 10.0f;
-      if (event.player.getMaxHealth() != scaleHealth * 20.0f) {
-        ModifiableAttributeInstance player_max_health = event.player.getAttribute(Attributes.MAX_HEALTH);
+      if (player.getMaxHealth() != scaleHealth * 20.0f) {
+        ModifiableAttributeInstance player_max_health = player.getAttribute(Attributes.MAX_HEALTH);
         player_max_health.removeModifier(FatHealth);
         player_max_health.applyNonPersistentModifier(new AttributeModifier(FatHealth, "FatMaxHealth", scaleHealth - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
-        if (event.player.getHealth() > event.player.getMaxHealth())
-          event.player.setHealth(event.player.getMaxHealth());
+        if (player.getHealth() > player.getMaxHealth())
+          player.setHealth(player.getMaxHealth());
       }
     }
   }
 
   @SubscribeEvent
-  public static void setSpeedPlayer(TickEvent.PlayerTickEvent event) {
-    if (DietModConfig.change_speed && !event.player.getEntityWorld().isRemote() && event.player.isAlive()) {
-      float scale = getCap(event.player).getScale();
+  public static void setSpeedPlayer(ChangeScaleEvent event) {
+    if (DietModConfig.change_speed && !event.getPlayer().getEntityWorld().isRemote()) {
+      PlayerEntity player = event.getPlayer();
+      float scale = event.getScale();
       double speed = MathHelper.clamp(1.0f / scale, 0.8f, 1.5f);
-      ModifiableAttributeInstance player_movement_speed = event.player.getAttribute(Attributes.MOVEMENT_SPEED);
+      ModifiableAttributeInstance player_movement_speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
       player_movement_speed.removeModifier(FatMovenentSpeed);
       player_movement_speed.applyNonPersistentModifier(new AttributeModifier(FatMovenentSpeed, "FatMovementSpeed", speed - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
     }
   }
 
   @SubscribeEvent
-  public static void killPlayer(TickEvent.PlayerTickEvent event) {
-    if (!event.player.getEntityWorld().isRemote()) {
-      if (getCap(event.player).getScale() < DietModConfig.killHealth) {
-        if (event.player.isAlive()) {
-          event.player.attackEntityFrom(Malnutrition, 20.0f);
+  public static void killPlayer(ChangeScaleEvent event) {
+    if (!event.getPlayer().getEntityWorld().isRemote()) {
+      PlayerEntity player = event.getPlayer();
+      if (event.getScale() < DietModConfig.killHealth) {
+        if (player.isAlive()) {
+          player.attackEntityFrom(Malnutrition, 20.0f);
         }
       }
     }
@@ -116,6 +121,8 @@ public class CommonEventHandler {
           IScale cap = getCap(player);
           float scale = MathHelper.clamp(cap.getScale() + food_heal, 0.2f, (float) DietModConfig.maxScale);
           cap.setScale(scale);
+          MinecraftForge.EVENT_BUS.post(new ChangeScaleEvent(player, scale));
+          PacketHandler.sendToAll(new CapabilityPacket(player.getEntityId(), scale));
         }
       }
     }
@@ -123,15 +130,51 @@ public class CommonEventHandler {
 
   @SubscribeEvent
   public static void onLoggedInPlayer(PlayerEvent.PlayerLoggedInEvent event) {
-    getCap(event.getPlayer()).setPrevWalkDistance(0.0f);
+    if (!event.getPlayer().getEntityWorld().isRemote()) {
+      PlayerEntity player = event.getPlayer();
+      IScale cap = getCap(player);
+      MinecraftForge.EVENT_BUS.post(new ChangeScaleEvent(player, cap.getScale()));
+      PacketHandler.sendToAll(new CapabilityPacket(player.getEntityId(), cap.getScale()));
+      cap.setPrevWalkDistance(0.0f);
+
+      for (PlayerEntity otherPlayer : event.getPlayer().getServer().getPlayerList().getPlayers()) {
+        if (otherPlayer == player) continue;
+        PacketHandler.sendTo(new CapabilityPacket(otherPlayer.getEntityId(), getCap(otherPlayer).getScale()), player);
+      }
+    }
+  }
+
+  @SubscribeEvent
+  public static void onRespawnPlayer(PlayerEvent.PlayerRespawnEvent event) {
+    if (!event.getPlayer().getEntityWorld().isRemote()) {
+      PlayerEntity player = event.getPlayer();
+
+      if (!event.isEndConquered()) {
+        resetAttributePlayer(player);
+        player.setHealth(player.getMaxHealth());
+      } else {
+        IScale cap = getCap(player);
+        MinecraftForge.EVENT_BUS.post(new ChangeScaleEvent(player, cap.getScale()));
+        PacketHandler.sendToAll(new CapabilityPacket(player.getEntityId(), cap.getScale()));
+      }
+
+      for (PlayerEntity otherPlayer : event.getPlayer().getServer().getPlayerList().getPlayers()) {
+        if (otherPlayer == player) continue;
+        PacketHandler.sendTo(new CapabilityPacket(otherPlayer.getEntityId(), getCap(otherPlayer).getScale()), player);
+      }
+    }
   }
 
   @SubscribeEvent
   public static void onClonePlayer(PlayerEvent.Clone event) {
-    if (!event.getPlayer().getEntityWorld().isRemote() && event.isWasDeath()) {
-      IScale newCap = getCap(event.getPlayer());
-      IScale oldCap = getCap(event.getOriginal());
+    if (!event.getPlayer().getEntityWorld().isRemote() && !event.isWasDeath()) {
+      PlayerEntity newPlayer = event.getPlayer();
+      PlayerEntity oldPlayer = event.getOriginal();
+      IScale newCap = getCap(newPlayer);
+      IScale oldCap = getCap(oldPlayer);
       newCap.copy(oldCap);
+      newCap.setPrevWalkDistance(0.0f);
+      newPlayer.setHealth(oldPlayer.getHealth());
     }
   }
 
@@ -152,10 +195,11 @@ public class CommonEventHandler {
   @SubscribeEvent
   public static void setPlayerHitbox(TickEvent.PlayerTickEvent event) {
     if (DietModConfig.change_hitbox && event.player.isAlive()) {
-      float scale = getCap(event.player).getScale();
+      PlayerEntity player = event.player;
+      float scale = getCap(player).getScale();
       float hitboxScale = MathHelper.clamp(0.6f * scale, 0.2f, 0.6f * (float) DietModConfig.maxScale);
-      AxisAlignedBB playerBoundingBox = event.player.getBoundingBox();
-      event.player.setBoundingBox(new AxisAlignedBB(playerBoundingBox.minX, playerBoundingBox.minY, playerBoundingBox.minZ, playerBoundingBox.minX + hitboxScale, playerBoundingBox.maxY, playerBoundingBox.minZ + hitboxScale));
+      AxisAlignedBB playerBoundingBox = player.getBoundingBox();
+      player.setBoundingBox(new AxisAlignedBB(playerBoundingBox.minX, playerBoundingBox.minY, playerBoundingBox.minZ, playerBoundingBox.minX + hitboxScale, playerBoundingBox.maxY, playerBoundingBox.minZ + hitboxScale));
     }
   }
 
@@ -176,18 +220,5 @@ public class CommonEventHandler {
     IScale cap = getCap(event.getPlayer());
     float scale = cap.getScale();
     event.setNewSpeed(event.getOriginalSpeed() * scale);
-  }
-
-  @SubscribeEvent
-  public static void onRespawnPlayer(PlayerEvent.PlayerRespawnEvent event) {
-    if (!event.isEndConquered()) {
-      PlayerEntity player = event.getPlayer();
-      IScale cap = getCap(player);
-      cap.setScale((float) DietModConfig.maxScale);
-      cap.setPrevWalkDistance(0.0f);
-      resetAttributePlayer(player);
-      PacketHandler.sendTo(new CapabilityPacket((float) DietModConfig.maxScale), player);
-      player.setHealth(player.getMaxHealth());
-    }
   }
 }
