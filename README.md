@@ -21,7 +21,7 @@ http://files.minecraftforge.net/maven/net/minecraftforge/forge/index_1.16.1.html
     configファイルにおけるdistanceToNormalを一時的に変更するコマンドです。
 
 ## configファイル
-Modを導入した状態で一回でも起動すると、configフォルダ内にdietmod-client.tomlが生成されます。<br>
+Modを導入した状態で一回でも起動すると、configフォルダ内にdietmod-common.tomlが生成されます。<br>
 値の変更は次回の起動時に適用されます。
 - maxScale
   - プレイヤーの最大サイズです。通常サイズの何倍かで指定します。<br>
