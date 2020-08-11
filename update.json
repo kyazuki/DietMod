@@ -1,6 +1,7 @@
 {
   "homepage": "https://github.com/kyazuki/DietMod/releases",
   "1.16.1": {
+    "0.1.8": "Packet is sent only in view range.\\nPlayer's hitboxes are changed by ASM.\\nAdd UpdatePlayerSizeEvent.",
     "0.1.7": "Add Capability/Packet System.\\nDivided Events.\\nConfig changed common from client.\\nSetDistanceCommand accept 10~100000.\\nRemove static fields.\\nChanged dependency upper 1.16 from 1.16.1.\\nChanged capability.\\nDivided ClientEventHandler.\\nAdd new configs.\\nMultiplay is available.",
     "0.1.6": "1.16.1 update."
   },
@@ -14,8 +15,8 @@
     "0.1.0": "Published."
   },
   "promos": {
-    "1.16.1-latest": "0.1.7",
-    "1.16.1-recommended": "0.1.7",
+    "1.16.1-latest": "0.1.8",
+    "1.16.1-recommended": "0.1.8",
     "1.15.2-latest": "0.1.6",
     "1.15.2-recommended": "0.1.6"
   }

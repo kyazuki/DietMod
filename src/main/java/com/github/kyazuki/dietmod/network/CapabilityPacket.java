@@ -1,11 +1,13 @@
 package com.github.kyazuki.dietmod.network;
 
 import com.github.kyazuki.dietmod.capabilities.ScaleProvider;
+import com.github.kyazuki.dietmod.events.DietModEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.PacketBuffer;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.network.NetworkEvent;
 
@@ -43,6 +45,7 @@ public class CapabilityPacket {
           Entity player = Minecraft.getInstance().world.getEntityByID(playerEntityID);
           if (!(player instanceof PlayerEntity)) return;
           player.getCapability(ScaleProvider.SCALE_CAP).orElseThrow(IllegalArgumentException::new).setScale(scale);
+          MinecraftForge.EVENT_BUS.post(new DietModEvents.UpdatePlayerSizeEvent((PlayerEntity) player));
         }
       };
     }

@@ -7,14 +7,16 @@ import com.github.kyazuki.dietmod.capabilities.IScale;
 import com.github.kyazuki.dietmod.capabilities.ScaleProvider;
 import com.github.kyazuki.dietmod.network.CapabilityPacket;
 import com.github.kyazuki.dietmod.network.PacketHandler;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntitySize;
+import net.minecraft.entity.Pose;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
@@ -26,6 +28,7 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = DietMod.MODID)
@@ -34,6 +37,8 @@ public class CommonEventHandler {
   public static final UUID FatHealth = UUID.fromString("7f73c613-1c4f-45df-8176-6e3f9590347b");
   public static final UUID FatMovenentSpeed = UUID.fromString("bba5aa63-ec4b-481f-9e2f-18d0c0a8e615");
   public static DamageSource Malnutrition = (new DamageSource("dietmod:malnutrition")).setDamageBypassesArmor();
+  private static final EntitySize DEFAULT_STANDING_SIZE = EntitySize.flexible(0.6F, 1.8F);
+  private static final Map<Pose, EntitySize> DEFAULT_SIZE_BY_POSE = ImmutableMap.<Pose, EntitySize>builder().put(Pose.STANDING, PlayerEntity.STANDING_SIZE).put(Pose.SLEEPING, EntitySize.fixed(0.2F, 0.2F)).put(Pose.FALL_FLYING, EntitySize.flexible(0.6F, 0.6F)).put(Pose.SWIMMING, EntitySize.flexible(0.6F, 0.6F)).put(Pose.SPIN_ATTACK, EntitySize.flexible(0.6F, 0.6F)).put(Pose.CROUCHING, EntitySize.flexible(0.6F, 1.5F)).put(Pose.DYING, EntitySize.fixed(0.2F, 0.2F)).build();
 
   // Utils
 
@@ -51,7 +56,39 @@ public class CommonEventHandler {
       player.getAttribute(Attributes.MOVEMENT_SPEED).applyNonPersistentModifier(new AttributeModifier(FatMovenentSpeed, "FatMovementSpeed", 1.0f / DietModConfig.maxScale - 1.0f, AttributeModifier.Operation.MULTIPLY_TOTAL));
   }
 
+  public static EntitySize getScaledPlayerSize(PlayerEntity player, Pose poseIn) {
+    if (DietModConfig.change_hitbox) {
+      float scale;
+      try {
+        scale = getCap(player).getScale();
+      } catch (IllegalArgumentException e) {
+        scale = 1.0f;
+      } catch (Exception e) {
+        throw e;
+      }
+
+      switch (poseIn) {
+        case STANDING:
+          return EntitySize.flexible(0.6F * scale, 1.8F);
+        case SLEEPING:
+          return EntitySize.fixed(0.2F, 0.2F);
+        case CROUCHING:
+          return EntitySize.flexible(0.6F * scale, 1.5F);
+        case DYING:
+          return EntitySize.flexible(0.2F, 0.2F);
+        default:
+          return EntitySize.flexible(0.6F, 0.6F * scale);
+      }
+    }
+    return DEFAULT_SIZE_BY_POSE.getOrDefault(poseIn, DEFAULT_STANDING_SIZE);
+  }
+
   // Server Only
+
+  @SubscribeEvent
+  public static void onCommandsRegister(RegisterCommandsEvent event) {
+    SetDistanceCommand.register(event.getDispatcher());
+  }
 
   @SubscribeEvent
   public static void calc(TickEvent.PlayerTickEvent event) {
@@ -64,15 +101,16 @@ public class CommonEventHandler {
         float prevScale = cap.getScale();
         float scale = MathHelper.clamp(prevScale - distance / DietModConfig.distanceToNormal, 0.2f, (float) DietModConfig.maxScale);
         cap.setScale(scale);
-        MinecraftForge.EVENT_BUS.post(new ChangeScaleEvent(event.player, scale));
-        PacketHandler.sendToAll(new CapabilityPacket(event.player.getEntityId(), scale));
+        MinecraftForge.EVENT_BUS.post(new DietModEvents.ChangedScaleEvent(event.player, scale));
+        MinecraftForge.EVENT_BUS.post(new DietModEvents.UpdatePlayerSizeEvent(event.player));
+        PacketHandler.sendToTrackersAndSelf(new CapabilityPacket(event.player.getEntityId(), scale), event.player);
         cap.setPrevWalkDistance(distanceWalked);
       }
     }
   }
 
   @SubscribeEvent
-  public static void setHealthPlayer(ChangeScaleEvent event) {
+  public static void setHealthPlayer(DietModEvents.ChangedScaleEvent event) {
     if (DietModConfig.change_max_health && !event.getPlayer().getEntityWorld().isRemote()) {
       PlayerEntity player = event.getPlayer();
       float scale = event.getScale();
@@ -88,7 +126,7 @@ public class CommonEventHandler {
   }
 
   @SubscribeEvent
-  public static void setSpeedPlayer(ChangeScaleEvent event) {
+  public static void setSpeedPlayer(DietModEvents.ChangedScaleEvent event) {
     if (DietModConfig.change_speed && !event.getPlayer().getEntityWorld().isRemote()) {
       PlayerEntity player = event.getPlayer();
       float scale = event.getScale();
@@ -100,7 +138,7 @@ public class CommonEventHandler {
   }
 
   @SubscribeEvent
-  public static void killPlayer(ChangeScaleEvent event) {
+  public static void killPlayer(DietModEvents.ChangedScaleEvent event) {
     if (!event.getPlayer().getEntityWorld().isRemote()) {
       PlayerEntity player = event.getPlayer();
       if (event.getScale() < DietModConfig.killHealth) {
@@ -121,8 +159,9 @@ public class CommonEventHandler {
           IScale cap = getCap(player);
           float scale = MathHelper.clamp(cap.getScale() + food_heal, 0.2f, (float) DietModConfig.maxScale);
           cap.setScale(scale);
-          MinecraftForge.EVENT_BUS.post(new ChangeScaleEvent(player, scale));
-          PacketHandler.sendToAll(new CapabilityPacket(player.getEntityId(), scale));
+          MinecraftForge.EVENT_BUS.post(new DietModEvents.ChangedScaleEvent(player, scale));
+          MinecraftForge.EVENT_BUS.post(new DietModEvents.UpdatePlayerSizeEvent(player));
+          PacketHandler.sendToTrackersAndSelf(new CapabilityPacket(player.getEntityId(), scale), player);
         }
       }
     }
@@ -130,52 +169,61 @@ public class CommonEventHandler {
 
   @SubscribeEvent
   public static void onLoggedInPlayer(PlayerEvent.PlayerLoggedInEvent event) {
-    if (!event.getPlayer().getEntityWorld().isRemote()) {
-      PlayerEntity player = event.getPlayer();
-      IScale cap = getCap(player);
-      MinecraftForge.EVENT_BUS.post(new ChangeScaleEvent(player, cap.getScale()));
-      PacketHandler.sendToAll(new CapabilityPacket(player.getEntityId(), cap.getScale()));
-      cap.setPrevWalkDistance(0.0f);
+    PlayerEntity player = event.getPlayer();
+    IScale cap = getCap(player);
+    MinecraftForge.EVENT_BUS.post(new DietModEvents.ChangedScaleEvent(player, cap.getScale()));
+    MinecraftForge.EVENT_BUS.post(new DietModEvents.UpdatePlayerSizeEvent(player));
+    PacketHandler.sendToTrackersAndSelf(new CapabilityPacket(player.getEntityId(), cap.getScale()), player);
+    cap.setPrevWalkDistance(0.0f);
 
-      for (PlayerEntity otherPlayer : event.getPlayer().getServer().getPlayerList().getPlayers()) {
-        if (otherPlayer == player) continue;
-        PacketHandler.sendTo(new CapabilityPacket(otherPlayer.getEntityId(), getCap(otherPlayer).getScale()), player);
-      }
+    for (PlayerEntity otherPlayer : event.getPlayer().getServer().getPlayerList().getPlayers()) {
+      if (otherPlayer == player) continue;
+      PacketHandler.sendTo(new CapabilityPacket(otherPlayer.getEntityId(), getCap(otherPlayer).getScale()), player);
+    }
+  }
+
+  @SubscribeEvent
+  public static void onChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+    PlayerEntity player = event.getPlayer();
+    PacketHandler.sendToTrackersAndSelf(new CapabilityPacket(player.getEntityId(), getCap(player).getScale()), player);
+
+    for (PlayerEntity otherPlayer : event.getPlayer().getServer().getPlayerList().getPlayers()) {
+      if (otherPlayer == player) continue;
+      PacketHandler.sendTo(new CapabilityPacket(otherPlayer.getEntityId(), getCap(otherPlayer).getScale()), player);
     }
   }
 
   @SubscribeEvent
   public static void onRespawnPlayer(PlayerEvent.PlayerRespawnEvent event) {
-    if (!event.getPlayer().getEntityWorld().isRemote()) {
-      PlayerEntity player = event.getPlayer();
+    PlayerEntity player = event.getPlayer();
 
-      if (!event.isEndConquered()) {
-        resetAttributePlayer(player);
-        player.setHealth(player.getMaxHealth());
-      } else {
-        IScale cap = getCap(player);
-        MinecraftForge.EVENT_BUS.post(new ChangeScaleEvent(player, cap.getScale()));
-        PacketHandler.sendToAll(new CapabilityPacket(player.getEntityId(), cap.getScale()));
-      }
+    if (!event.isEndConquered()) {
+      resetAttributePlayer(player);
+      player.setHealth(player.getMaxHealth());
+    } else {
+      IScale cap = getCap(player);
+      MinecraftForge.EVENT_BUS.post(new DietModEvents.ChangedScaleEvent(player, cap.getScale()));
+      MinecraftForge.EVENT_BUS.post(new DietModEvents.UpdatePlayerSizeEvent(player));
+      PacketHandler.sendToTrackersAndSelf(new CapabilityPacket(player.getEntityId(), cap.getScale()), player);
+    }
 
-      for (PlayerEntity otherPlayer : event.getPlayer().getServer().getPlayerList().getPlayers()) {
-        if (otherPlayer == player) continue;
-        PacketHandler.sendTo(new CapabilityPacket(otherPlayer.getEntityId(), getCap(otherPlayer).getScale()), player);
-      }
+    for (PlayerEntity otherPlayer : event.getPlayer().getServer().getPlayerList().getPlayers()) {
+      if (otherPlayer == player) continue;
+      PacketHandler.sendTo(new CapabilityPacket(otherPlayer.getEntityId(), getCap(otherPlayer).getScale()), player);
     }
   }
 
   @SubscribeEvent
   public static void onClonePlayer(PlayerEvent.Clone event) {
-    if (!event.getPlayer().getEntityWorld().isRemote() && !event.isWasDeath()) {
-      PlayerEntity newPlayer = event.getPlayer();
-      PlayerEntity oldPlayer = event.getOriginal();
-      IScale newCap = getCap(newPlayer);
-      IScale oldCap = getCap(oldPlayer);
-      newCap.copy(oldCap);
-      newCap.setPrevWalkDistance(0.0f);
-      newPlayer.setHealth(oldPlayer.getHealth());
-    }
+    if (event.isWasDeath()) return;
+
+    PlayerEntity newPlayer = event.getPlayer();
+    PlayerEntity oldPlayer = event.getOriginal();
+    IScale newCap = getCap(newPlayer);
+    IScale oldCap = getCap(oldPlayer);
+    newCap.copy(oldCap);
+    newCap.setPrevWalkDistance(0.0f);
+    newPlayer.setHealth(oldPlayer.getHealth());
   }
 
   // Server & Client
@@ -188,19 +236,9 @@ public class CommonEventHandler {
   }
 
   @SubscribeEvent
-  public static void onCommandsRegister(RegisterCommandsEvent event) {
-    SetDistanceCommand.register(event.getDispatcher());
-  }
-
-  @SubscribeEvent
-  public static void setPlayerHitbox(TickEvent.PlayerTickEvent event) {
-    if (DietModConfig.change_hitbox && event.player.isAlive()) {
-      PlayerEntity player = event.player;
-      float scale = getCap(player).getScale();
-      float hitboxScale = MathHelper.clamp(0.6f * scale, 0.2f, 0.6f * (float) DietModConfig.maxScale);
-      AxisAlignedBB playerBoundingBox = player.getBoundingBox();
-      player.setBoundingBox(new AxisAlignedBB(playerBoundingBox.minX, playerBoundingBox.minY, playerBoundingBox.minZ, playerBoundingBox.minX + hitboxScale, playerBoundingBox.maxY, playerBoundingBox.minZ + hitboxScale));
-    }
+  public static void setPlayerHitbox(DietModEvents.UpdatePlayerSizeEvent event) {
+    if (DietModConfig.change_hitbox)
+      event.getPlayer().recalculateSize();
   }
 
   @SubscribeEvent

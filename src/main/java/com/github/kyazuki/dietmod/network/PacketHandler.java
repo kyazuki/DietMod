@@ -25,7 +25,7 @@ public class PacketHandler {
     CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player), message);
   }
 
-  public static void sendToAll(Object message) {
-    CHANNEL.send(PacketDistributor.ALL.noArg(), message);
+  public static void sendToTrackersAndSelf(Object message, PlayerEntity player) {
+    CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player), message);
   }
 }
