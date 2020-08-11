@@ -171,26 +171,14 @@ public class CommonEventHandler {
   public static void onLoggedInPlayer(PlayerEvent.PlayerLoggedInEvent event) {
     PlayerEntity player = event.getPlayer();
     IScale cap = getCap(player);
-    MinecraftForge.EVENT_BUS.post(new DietModEvents.ChangedScaleEvent(player, cap.getScale()));
-    MinecraftForge.EVENT_BUS.post(new DietModEvents.UpdatePlayerSizeEvent(player));
-    PacketHandler.sendToTrackersAndSelf(new CapabilityPacket(player.getEntityId(), cap.getScale()), player);
+    PacketHandler.sendTo(new CapabilityPacket(player.getEntityId(), cap.getScale()), player);
     cap.setPrevWalkDistance(0.0f);
-
-    for (PlayerEntity otherPlayer : event.getPlayer().getServer().getPlayerList().getPlayers()) {
-      if (otherPlayer == player) continue;
-      PacketHandler.sendTo(new CapabilityPacket(otherPlayer.getEntityId(), getCap(otherPlayer).getScale()), player);
-    }
   }
 
   @SubscribeEvent
   public static void onChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
     PlayerEntity player = event.getPlayer();
-    PacketHandler.sendToTrackersAndSelf(new CapabilityPacket(player.getEntityId(), getCap(player).getScale()), player);
-
-    for (PlayerEntity otherPlayer : event.getPlayer().getServer().getPlayerList().getPlayers()) {
-      if (otherPlayer == player) continue;
-      PacketHandler.sendTo(new CapabilityPacket(otherPlayer.getEntityId(), getCap(otherPlayer).getScale()), player);
-    }
+    PacketHandler.sendTo(new CapabilityPacket(player.getEntityId(), getCap(player).getScale()), player);
   }
 
   @SubscribeEvent
@@ -201,16 +189,16 @@ public class CommonEventHandler {
       resetAttributePlayer(player);
       player.setHealth(player.getMaxHealth());
     } else {
-      IScale cap = getCap(player);
-      MinecraftForge.EVENT_BUS.post(new DietModEvents.ChangedScaleEvent(player, cap.getScale()));
-      MinecraftForge.EVENT_BUS.post(new DietModEvents.UpdatePlayerSizeEvent(player));
-      PacketHandler.sendToTrackersAndSelf(new CapabilityPacket(player.getEntityId(), cap.getScale()), player);
+      PacketHandler.sendTo(new CapabilityPacket(player.getEntityId(), getCap(player).getScale()), player);
     }
+  }
 
-    for (PlayerEntity otherPlayer : event.getPlayer().getServer().getPlayerList().getPlayers()) {
-      if (otherPlayer == player) continue;
-      PacketHandler.sendTo(new CapabilityPacket(otherPlayer.getEntityId(), getCap(otherPlayer).getScale()), player);
-    }
+  @SubscribeEvent
+  public static void onStartTracking(PlayerEvent.StartTracking event) {
+    if (!(event.getTarget() instanceof PlayerEntity)) return;
+
+    PlayerEntity trackedPlayer = (PlayerEntity) event.getTarget();
+    PacketHandler.sendTo(new CapabilityPacket(trackedPlayer.getEntityId(), getCap(trackedPlayer).getScale()), event.getPlayer());
   }
 
   @SubscribeEvent
